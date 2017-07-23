@@ -8,8 +8,12 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
+import android.util.Pair;
 import android.view.MotionEvent;
 import android.view.View;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by allenliu on 2017-07-21.
@@ -24,55 +28,33 @@ public class CanvasView extends View {
     //a drawing primitive
     private Path mPath;
     //a paint to hold colors and styles
-    private Paint mPaint;
+    private Paint mPaint = new Paint();
     //coordinate variables
     private float mX, mY;
     //distance that can be tolerated before drawing path
     private static final float TOLERANCE = 1f;
     Context context;
 
+    List<Pair<Path, Paint>> paths = new ArrayList<Pair<Path,Paint>>();
+
     public CanvasView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         //set context equal to parameter context
         this.context = context;
 
-        mPath = new Path();
-        mPaint = new Paint();
-
-        //smooths the edges
-        mPaint.setAntiAlias(true);
-        mPaint.setColor(Color.BLACK);
-        //play with the styles to see what each does
-        mPaint.setStyle(Paint.Style.STROKE);
-        //sets how the stroke joins, play with this
-        mPaint.setStrokeJoin(Paint.Join.ROUND);
-        mPaint.setStrokeWidth(20f);
-
     }
+
 
     //this draws the view
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        canvas.drawPath(mPath,mPaint);
+        for (Pair<Path,Paint> path_clr: paths){
+            canvas.drawPath(path_clr.first, path_clr.second);
+        }
+
     }
 
-    public void changeRed(){
-        mPaint.setColor(Color.RED);
-        invalidate();
-    }
-    public void changeGreen(){
-        mPaint.setColor(Color.GREEN);
-        invalidate();
-    }
-    public void changeBlue(){
-        mPaint.setColor(Color.BLUE);
-        invalidate();
-    }
-    public void changeBlack(){
-        mPaint.setColor(Color.BLACK);
-        invalidate();
-    }
 
 
     //calculates how big the view is
@@ -83,13 +65,34 @@ public class CanvasView extends View {
         mBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
     }
 
-    //the first touch sets the path equal to the coordinate
+
+
+    //right now every starttouch makes a new path but there is also a new mPaint statement
+    // in it too. When you select a changeColor, it changes the color of the current path, not the new path.
+    // What needs to happen is when you select the color, the color of the new path changes. Remove the new Paint
+    // statement in the starttouch so there isn't a black line every time, keep the style in it, don't have a setcolor.
+    // In each color selector, first set the path as new and then set the color. Style will be assigned on touch.
+
+    //right now first touch doesn't have a path unless you define a new path
     private void startTouch(float x, float y){
         //where to start the path on the first touch
+        mPath = new Path();
+        //smooths the edges
+        mPaint.setAntiAlias(true);
+        //play with the styles to see what each does
+        mPaint.setStyle(Paint.Style.STROKE);
+        //sets how the stroke joins, play with this
+        mPaint.setStrokeJoin(Paint.Join.ROUND);
+        mPaint.setStrokeWidth(20f);
+
         mPath.moveTo(x,y);
         mX = x;
         mY = y;
+        paths.add(Pair.create(mPath,mPaint));
     }
+
+
+
                             //current touch position
     private void moveTouch(float x, float y){
             //distance between start touch and movetouch position
@@ -110,13 +113,43 @@ public class CanvasView extends View {
     //when you release touch, mpath goes to you the last touch position
     public void upTouch(){
         mPath.lineTo(mX,mY);
+       // mPaint = new Paint();
     }
 
     //custom clearCanvas method
     public void clearCanvas(){
-        mPath.reset();
+        for(Pair<Path,Paint> path_clr: paths){
+            path_clr.first.reset();
+        }
         invalidate();
     }
+
+    public void changeRed(){
+        newPaint();
+        mPaint.setColor(Color.RED);
+        invalidate();
+    }
+    public void changeGreen(){
+        newPaint();
+        mPaint.setColor(Color.GREEN);
+        invalidate();
+    }
+    public void changeBlue(){
+        newPaint();
+        mPaint.setColor(Color.BLUE);
+        invalidate();
+    }
+    public void changeBlack(){
+        newPaint();
+        mPaint.setColor(Color.BLACK);
+        invalidate();
+    }
+
+    public void newPaint(){
+        mPaint = new Paint();
+    }
+
+
 
     //this is everything that happens when you touch the screen.
     @Override
